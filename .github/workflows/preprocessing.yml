@@ -27,7 +27,7 @@ jobs:
 
       - name: Run preprocessing script
         run: |
-          cd preprocessing
+          cd Preprocessing
           python automate_Loista_Amanda_Noviar.py
 
       - name: Upload preprocessed dataset
