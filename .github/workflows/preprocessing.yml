@@ -3,35 +3,29 @@ name: Preprocessing Dataset IMDB
 on:
   push:
     paths:
-      - "dataset_raw/**"
-      - "preprocessing/**"
+      - preprocessing/**
+      - dataset_raw/**
   workflow_dispatch:
 
 jobs:
-  preprocess:
+  preprocessing:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas numpy
+    - name: Install dependencies
+      run: |
+        pip install pandas numpy numpy matplotlib seaborn
 
-      - name: Run preprocessing script
-        run: |
-          cd Preprocessing
-          python automate_Loista_Amanda_Noviar.py
+    - name: Debug folder
+      run: ls -R
 
-      - name: Upload preprocessed dataset
-        uses: actions/upload-artifact@v4
-        with:
-          name: imbd_preprocessed
-          path: preprocessing/dataset_preprocessing/imbd_preprocessed.csv
+    - name: Run preprocessing
+      run: python preprocessing/automate_Loista_Amanda_Noviar.py
