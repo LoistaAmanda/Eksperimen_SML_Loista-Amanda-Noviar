@@ -1,14 +1,12 @@
-name: Preprocessing Dataset IMDB
+name: Preprocessing IMDB Dataset
 
 on:
   push:
-    paths:
-      - preprocessing/**
-      - dataset_raw/**
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  preprocessing:
+  preprocess:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,14 +16,20 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
-        pip install pandas numpy numpy matplotlib seaborn
+        python -m pip install --upgrade pip
+        pip install pandas numpy scikit-learn
 
-    - name: Debug folder
-      run: ls -R
+    - name: Debug folder structure
+      run: |
+        echo "ROOT:"
+        ls
+        echo "PREPROCESSING:"
+        ls preprocessing
 
-    - name: Run preprocessing
-      run: python preprocessing/automate_Loista_Amanda_Noviar.py
+    - name: Run preprocessing script
+      run: |
+        python preprocessing/automate_loista-amanda-noviar.py
