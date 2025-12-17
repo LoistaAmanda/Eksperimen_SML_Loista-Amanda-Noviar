@@ -1,0 +1,22 @@
+artifact_path: file:C:/tugas kulyah/Semester 5/ASAH/Eksperimen_SML_Loista-Amanda-Noviar/Eksperimen_SML_Loista-Amanda-Noviar/membangun_model/mlruns/0/models/m-d622dcc98ada4a1e84cecbf519094295/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.10
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+mlflow_version: 3.7.0
+model_id: m-d622dcc98ada4a1e84cecbf519094295
+model_size_bytes: 34216548
+model_uuid: m-d622dcc98ada4a1e84cecbf519094295
+prompts: null
+run_id: 428fd3a71d874c4dbf22c8925e210126
+utc_time_created: '2025-12-17 08:12:51.516083'
