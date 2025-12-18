@@ -1,46 +1,45 @@
-# ============================================
-# MODELLING IMDB MOVIE RATING CLASSIFICATION
-# ============================================
-
 from pathlib import Path
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    classification_report
+)
 
+# MLflow
 import mlflow
 import mlflow.sklearn
 
-# ============================================
-# 1. Konfigurasi Path Folder
-# ============================================
 
-# Folder utama modelling
-ROOT_DIR = Path(__file__).resolve().parent
+# =========================================================
+# PATH CONFIGURATION
+# =========================================================
+BASE_DIR = Path(__file__).resolve().parent
 
-# Path dataset hasil preprocessing
-DATA_PATH = ROOT_DIR / "dataset_preprocessing" / "imbd_preprocessed.csv"
+DATA_PATH = BASE_DIR / "dataset_preprocessing" / "imbd_preprocessed.csv"
+ARTIFACT_DIR = BASE_DIR / "artifacts"
+ARTIFACT_DIR.mkdir(exist_ok=True)
 
-# Folder untuk menyimpan artefak (gambar, laporan)
-ARTIFAK_DIR = ROOT_DIR / "artifacts"
-ARTIFAK_DIR.mkdir(exist_ok=True)
 
-# ============================================
-# 2. Load Dataset
-# ============================================
-
+# =========================================================
+# LOAD DATASET
+# =========================================================
 df = pd.read_csv(DATA_PATH)
 
-# Fitur (teks) dan target (label kelas rating)
 X = df["clean_text"]
 y = df["label"]
 
-# Split data train dan test
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -49,106 +48,126 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
-# ============================================
-# 3. Pipeline Model NLP
-# ============================================
 
-# Pipeline:
-# - TF-IDF untuk ekstraksi fitur teks
-# - Random Forest untuk klasifikasi multi-kelas
+# =========================================================
+# SET MLFLOW EXPERIMENT (LOCAL)
+# =========================================================
+mlflow.set_experiment("IMDB_Tuning_Experiment")
+
+
+# =========================================================
+# PIPELINE + HYPERPARAMETER TUNING
+# =========================================================
 pipeline = Pipeline([
-    ("tfidf", TfidfVectorizer(max_features=5000)),
-    ("clf", RandomForestClassifier(
-        n_estimators=100,
-        random_state=42
+    ("tfidf", TfidfVectorizer(
+        max_features=8000,
+        ngram_range=(1, 2),
+        stop_words="english"
+    )),
+    ("classifier", RandomForestClassifier(
+        n_estimators=200,      # TUNING
+        max_depth=25,          # TUNING
+        random_state=42,
+        n_jobs=-1
     ))
 ])
 
-# ============================================
-# 4. Training + MLflow Manual Logging
-# ============================================
 
+# =========================================================
+# TRAINING & MANUAL LOGGING
+# =========================================================
 with mlflow.start_run():
 
-    # =========================
-    # Training Model
-    # =========================
+    # -------------------------
+    # Training
+    # -------------------------
     pipeline.fit(X_train, y_train)
 
-    # =========================
-    # Logging Parameter Model
-    # (WAJIB untuk ADVANCE)
-    # =========================
-    mlflow.log_param("model", "RandomForestClassifier")
-    mlflow.log_param("n_estimators", 100)
-    mlflow.log_param("tfidf_max_features", 5000)
-    mlflow.log_param("test_size", 0.2)
-
-    # =========================
-    # Prediksi dan Evaluasi
-    # =========================
+    # -------------------------
+    # Prediction
+    # -------------------------
     y_pred = pipeline.predict(X_test)
 
-    # Classification report
-    report = classification_report(y_test, y_pred, output_dict=True)
+    # -------------------------
+    # Metrics (SETARA AUTOLOG)
+    # -------------------------
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average="weighted")
+    rec = recall_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
 
-    # Confusion matrix
+    mlflow.log_metric("accuracy", acc)
+    mlflow.log_metric("precision_weighted", prec)
+    mlflow.log_metric("recall_weighted", rec)
+    mlflow.log_metric("f1_weighted", f1)
+
+    # -------------------------
+    # Log Parameters
+    # -------------------------
+    mlflow.log_param("model_type", "RandomForestClassifier")
+    mlflow.log_param("n_estimators", 200)
+    mlflow.log_param("max_depth", 25)
+    mlflow.log_param("vectorizer", "TF-IDF")
+    mlflow.log_param("ngram_range", "(1,2)")
+
+    # =====================================================
+    # CONFUSION MATRIX (ARTIFACT)
+    # =====================================================
     cm = confusion_matrix(y_test, y_pred)
 
-    # =========================
-    # Logging Metrics (Manual)
-    # =========================
-    mlflow.log_metric("accuracy", report["accuracy"])
-
-    mlflow.log_metrics({
-        "precision_low": report["low"]["precision"],
-        "recall_low": report["low"]["recall"],
-        "f1_low": report["low"]["f1-score"],
-        "precision_medium": report["medium"]["precision"],
-        "recall_medium": report["medium"]["recall"],
-        "f1_medium": report["medium"]["f1-score"],
-        "precision_high": report["high"]["precision"],
-        "recall_high": report["high"]["recall"],
-        "f1_high": report["high"]["f1-score"],
-    })
-
-    # =========================
-    # Logging Model (WAJIB ADVANCE)
-    # =========================
-    mlflow.sklearn.log_model(
-        pipeline,
-        artifact_path="model"
-    )
-
-    # =========================
-    # Simpan & Log Confusion Matrix
-    # =========================
     plt.figure(figsize=(6, 4))
     sns.heatmap(
         cm,
         annot=True,
         fmt="d",
         cmap="Blues",
-        xticklabels=["low", "medium", "high"],
-        yticklabels=["low", "medium", "high"]
+        xticklabels=sorted(y.unique()),
+        yticklabels=sorted(y.unique())
     )
-    plt.xlabel("Prediksi")
-    plt.ylabel("Aktual")
-    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.title("Training Confusion Matrix")
 
-    cm_path = ARTIFAK_DIR / "confusion_matrix.png"
+    cm_path = ARTIFACT_DIR / "training_confusion_matrix.png"
+    plt.tight_layout()
     plt.savefig(cm_path)
     plt.close()
 
     mlflow.log_artifact(str(cm_path))
 
-    # =========================
-    # Simpan & Log Classification Report
-    # =========================
-    report_path = ARTIFAK_DIR / "classification_report.txt"
+    # =====================================================
+    # CLASSIFICATION REPORT
+    # =====================================================
+    report = classification_report(y_test, y_pred)
+
+    report_path = ARTIFACT_DIR / "classification_report_tuning.txt"
     with open(report_path, "w") as f:
-        f.write(classification_report(y_test, y_pred))
+        f.write(report)
 
     mlflow.log_artifact(str(report_path))
 
-print("Training dan logging MLflow selesai.")
+    # =====================================================
+    # METRIC INFO JSON
+    # =====================================================
+    metric_info = {
+        "accuracy": acc,
+        "precision_weighted": prec,
+        "recall_weighted": rec,
+        "f1_weighted": f1
+    }
+
+    metric_info_path = ARTIFACT_DIR / "metric_info.json"
+    with open(metric_info_path, "w") as f:
+        json.dump(metric_info, f, indent=4)
+
+    mlflow.log_artifact(str(metric_info_path))
+
+    # =====================================================
+    # LOG MODEL 
+    # =====================================================
+    mlflow.sklearn.log_model(
+        sk_model=pipeline,
+        artifact_path="model"
+    )
+
+    print("Model tuning & artefak berhasil dilog ke MLflow")
