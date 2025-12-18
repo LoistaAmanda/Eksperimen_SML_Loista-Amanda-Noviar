@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/tugas%20kulyah/Semester%205/ASAH/Eksperimen_SML_Loista-Amanda-Noviar/Eksperimen_SML_Loista-Amanda-Noviar/membangun_model/mlruns/143352404699011639/14d3daa1871640528b37359a99fa6e11/artifacts
+end_time: 1766068842974
+entry_point_name: ''
+experiment_id: '143352404699011639'
+lifecycle_stage: active
+run_id: 14d3daa1871640528b37359a99fa6e11
+run_name: loud-vole-495
+run_uuid: 14d3daa1871640528b37359a99fa6e11
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766068829679
+status: 3
+tags: []
+user_id: lulua
